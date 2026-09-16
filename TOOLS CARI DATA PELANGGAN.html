@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Pelanggan</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        :root {
+            --primary: #00897b; --primary-dark: #00695c; --primary-light: #e0f2f1;
+            --accent-orange: #f57c00; --accent-blue: #1976d2; --accent-green: #2e7d32;
+            --danger: #d32f2f; --bg-body: #f1f5f9; --card-bg: #ffffff;
+            --text-main: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0;
+            --radius-lg: 16px; --radius-md: 10px;
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); padding: 16px; display: flex; justify-content: center; }
+        .app-wrapper { width: 100%; max-width: 480px; margin: 0 auto; }
+        
+        .app-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); padding: 20px; border-radius: var(--radius-lg); color: white; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0, 137, 123, 0.25);}
+        .app-header h1 { font-size: 20px; font-weight: 700; }
+        .app-header p { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+        
+        .tab-switcher { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 16px; gap: 4px; }
+        .tab-btn { flex: 1; padding: 10px 14px; font-size: 13px; font-weight: 600; border: none; border-radius: 9px; background: transparent; color: var(--text-muted); cursor: pointer; transition: 0.2s;}
+        .tab-btn.active { background: white; color: var(--primary-dark); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        
+        .card { background: var(--card-bg); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-card); border: 1px solid var(--border-color); margin-bottom: 16px; }
+        
+        /* Area Kamera */
+        #reader-container { position: relative; width: 100%; background: #000; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 15px;}
+        #reader { width: 100%; min-height: 250px; border: none; }
+        #reader video { border-radius: var(--radius-md); object-fit: cover; width: 100%; display: block; }
+        
+        /* CSS Khusus Pilihan Lensa */
+        .lens-selector { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; }
+        .btn-lens { background: #e2e8f0; color: var(--text-muted); border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; flex: 1; min-width: 60px; max-width: 80px; text-align: center; }
+        .btn-lens.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(0, 137, 123, 0.3); }
+        .lens-info { font-size: 11px; color: var(--text-muted); font-weight: 600; text-align: center; margin-top: 8px; width: 100%; }
+        
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;}
+        .form-control { width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1.5px solid var(--border-color); font-size: 15px; outline: none; margin-bottom: 14px;}
+        .form-control:focus { border-color: var(--primary); }
+        .btn-submit { width: 100%; padding: 14px; border: none; border-radius: var(--radius-md); background: var(--primary); color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
+        
+        #loading-view { display: none; text-align: center; padding: 40px 20px; }
+        .loader { width: 44px; height: 44px; border: 4px solid var(--primary-light); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        #result-view { display: none; }
+        .customer-card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; }
+        .customer-name { font-size: 18px; font-weight: 700; }
+        .status-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+        .badge-active { background-color: #dcfce7; color: #15803d; }
+        .badge-inactive { background-color: #fee2e2; color: #b91c1c; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .info-tile { background: #f8fafc; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid #edf2f7; }
+        .info-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+        .info-value { font-size: 14px; font-weight: 600; word-break: break-word; }
+        
+        .note-section { background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: var(--radius-md); margin-bottom: 16px; }
+        .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;}
+        .note-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #d84315; }
+        .note-timestamp { font-size: 11px; font-style: italic; color: #8d6e63; }
+        .note-section textarea { width: 100%; padding: 10px; border: 1px solid #ffd54f; border-radius: 6px; font-size: 14px; resize: vertical; min-height: 70px; margin-bottom: 8px; outline: none;}
+        .note-section textarea:focus { border-color: #ffca28; background: #fff; }
+        .btn-save-note { background: #ffb300; color: #4e342e; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; width: 100%;}
+        
+        .actions-group { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 16px; }
+        .action-link { display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; text-decoration: none; color: white; }
+        .btn-maps { background-color: var(--accent-blue); }
+        .btn-photo-meter { background-color: var(--accent-orange); }
+        .btn-photo-house { background-color: var(--accent-green); }
+        .btn-reset { margin-top: 8px; background: #e2e8f0; color: var(--text-main); border: none; padding: 12px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <div class="app-header">
+        <h1>Pencarian Pelanggan</h1>
+        <p>Arahkan kamera ke QR Code Meteran PLN</p>
+    </div>
+
+    <div id="search-container">
+        <div class="tab-switcher">
+            <button class="tab-btn active" id="tab-scan-btn" onclick="switchMode('scan')">📷 Kamera</button>
+            <button class="tab-btn" id="tab-manual-btn" onclick="switchMode('manual')">⌨️ Ketik Manual</button>
+        </div>
+
+        <div class="card" id="scan-section">
+            <div id="reader-container">
+                <div id="reader"></div>
+            </div>
+            
+            <!-- Tempat Menu Pilihan Lensa -->
+            <div class="lens-selector" id="lens-buttons-container" style="display: none;">
+                <!-- Tombol lensa akan di-generate otomatis oleh JavaScript -->
+            </div>
+            <div class="lens-info" id="lens-info-text">Mendeteksi lensa kamera...</div>
+        </div>
+
+        <div class="card" id="manual-section" style="display: none;">
+            <div class="form-group">
+                <label>No Meter / ID Pelanggan</label>
+                <input type="text" id="input-manual" class="form-control" placeholder="Contoh: 14049927651">
+            </div>
+            <button class="btn-submit" onclick="submitManual()">Cari Data</button>
+        </div>
+    </div>
+
+    <div class="card" id="loading-view">
+        <div class="loader"></div>
+        <p id="loading-text" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Mencari Database...</p>
+    </div>
+
+    <div class="card" id="result-view">
+        <div class="customer-card-header">
+            <div>
+                <div class="info-label">Nama Pelanggan</div>
+                <div class="customer-name" id="res-nama">-</div>
+            </div>
+            <div id="res-status-badge" class="status-badge">-</div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-tile"><div class="info-label">No Meter</div><div class="info-value" id="res-nometer">-</div></div>
+            <div class="info-tile"><div class="info-label">ID Pelanggan</div><div class="info-value" id="res-idpel">-</div></div>
+            <div class="info-tile"><div class="info-label">KDDK</div><div class="info-value" id="res-kddk">-</div></div>
+            <div class="info-tile"><div class="info-label">Tarif / Daya</div><div class="info-value" id="res-tarifdaya">-</div></div>
+        </div>
+
+        <div class="note-section" id="box-catatan" style="display: none;">
+            <div class="note-header">
+                <div class="note-label">📝 CATATAN / KETERANGAN</div>
+                <div class="note-timestamp" id="res-timestamp">Belum ada catatan</div>
+            </div>
+            <textarea id="input-catatan" placeholder="Ketik keterangan survei/kondisi meter di sini..."></textarea>
+            <button class="btn-save-note" id="btn-simpan-catatan" onclick="simpanCatatan()">💾 Simpan ke Spreadsheet</button>
+        </div>
+
+        <div class="actions-group" id="actions-box">
+            <a href="#" target="_blank" id="btn-maps" class="action-link btn-maps" style="display: none;">📍 Buka Titik Maps</a>
+            <a href="#" target="_blank" id="btn-foto-meter" class="action-link btn-photo-meter" style="display: none;">📷 Foto Meter</a>
+            <a href="#" target="_blank" id="btn-foto-rumah" class="action-link btn-photo-house" style="display: none;">🏠 Foto Rumah</a>
+        </div>
+
+        <button class="btn-reset" onclick="resetApp()">Kembali ke Pencarian</button>
+    </div>
+</div>
+
+<script>
+    // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNv9mTgl73Dx7wNE1kPoHisfV8IaZIgjvshn53TG3Yq_kmiCwsa_ETAj8o48k6bl2YEA/exec";
+    
+    let html5QrCode;
+    let isScanning = false;
+    let availableCameras = [];
+    let currentCameraIndex = 0;
+    let lastScannedId = ""; 
+
+    // Mendeteksi kamera dan membuat tombol pilihan lensa
+    Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+            availableCameras = devices;
+            
+            // Coba cari kamera belakang sebagai default (lensa utama)
+            for(let i=0; i < devices.length; i++){
+                if(devices[i].label.toLowerCase().includes('back')) {
+                    currentCameraIndex = i;
+                    break;
+                }
+            }
+
+            renderLensButtons();
+
+            if (document.getElementById('tab-scan-btn').classList.contains('active')) {
+                startScanner();
+            }
+        } else {
+            document.getElementById('lens-info-text').innerText = "Kamera tidak ditemukan / Izin diblokir.";
+        }
+    }).catch(err => {
+        console.error("Gagal mendeteksi kamera:", err);
+        document.getElementById('lens-info-text').innerText = "Mohon izinkan akses kamera pada browser Anda.";
+    });
+
+    // Fungsi menggambar tombol pilihan 4 Lensa
+    function renderLensButtons() {
+        const container = document.getElementById('lens-buttons-container');
+        const infoText = document.getElementById('lens-info-text');
+        container.innerHTML = ''; 
+        
+        if (availableCameras.length > 1) {
+            container.style.display = 'flex';
+            infoText.style.display = 'none'; // Sembunyikan teks info jika tombol sudah ada
+            
+            // Batasi maksimal 4 pilihan tombol lensa (sesuai permintaan)
+            const maxLensa = Math.min(availableCameras.length, 4);
+            
+            for(let i = 0; i < maxLensa; i++) {
+                const btn = document.createElement('button');
+                btn.className = `btn-lens ${i === currentCameraIndex ? 'active' : ''}`;
+                btn.innerText = `Lensa ${i + 1}`;
+                btn.onclick = () => selectLens(i);
+                container.appendChild(btn);
+            }
+        } else {
+            container.style.display = 'none';
+            infoText.innerText = "Hanya 1 lensa kamera yang terdeteksi.";
+        }
+    }
+
+    // Fungsi ketika tombol lensa diklik
+    function selectLens(index) {
+        if (currentCameraIndex === index) return; // Jika klik lensa yang sama, abaikan
+        
+        currentCameraIndex = index;
+        
+        // Update warna tombol (hijau untuk yang aktif)
+        const buttons = document.querySelectorAll('.btn-lens');
+        buttons.forEach((btn, i) => {
+            if (i === index) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
+        // Restart kamera dengan lensa yang baru
+        if (isScanning) {
+            stopScanner().then(() => {
+                setTimeout(() => startScanner(), 300);
+            });
+        }
+    }
+
+    function startScanner() {
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        if (isScanning || availableCameras.length === 0) return;
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
+        };
+
+        let cameraId = availableCameras[currentCameraIndex].id;
+
+        html5QrCode.start(
+            cameraId,
+            config,
+            (decodedText) => {
+                stopScanner().then(() => searchData(decodedText));
+            },
+            (errorMessage) => {}
+        ).then(() => {
+            isScanning = true;
+        }).catch((err) => {
+            console.error(err);
+        });
+    }
+
+    function stopScanner() {
+        return new Promise((resolve) => {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    isScanning = false;
+                    resolve();
+                }).catch(err => resolve());
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    function switchMode(mode) {
+        if (mode === 'scan') {
+            document.getElementById('tab-scan-btn').classList.add('active');
+            document.getElementById('tab-manual-btn').classList.remove('active');
+            document.getElementById('scan-section').style.display = 'block';
+            document.getElementById('manual-section').style.display = 'none';
+            startScanner();
+        } else {
+            document.getElementById('tab-manual-btn').classList.add('active');
+            document.getElementById('tab-scan-btn').classList.remove('active');
+            document.getElementById('scan-section').style.display = 'none';
+            document.getElementById('manual-section').style.display = 'block';
+            stopScanner();
+        }
+    }
+
+    function searchData(keyword) {
+        if (!keyword || keyword.trim() === '') return;
+        lastScannedId = keyword.replace(/\s+/g, ''); 
+        
+        stopScanner();
+        document.getElementById('search-container').style.display = 'none';
+        document.getElementById('result-view').style.display = 'none';
+        document.getElementById('loading-view').style.display = 'block';
+        document.getElementById('loading-text').innerText = "Mencari Database...";
+
+        fetch(`${APPS_SCRIPT_URL}?id=${encodeURIComponent(lastScannedId)}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading-view').style.display = 'none';
+                document.getElementById('result-view').style.display = 'block';
+
+                if (data.status === 'success') {
+                    document.getElementById('res-nama').innerText = data.nama || '-';
+                    document.getElementById('res-nometer').innerText = data.no_meter || '-';
+                    document.getElementById('res-idpel').innerText = data.idpel || '-';
+                    document.getElementById('res-kddk').innerText = data.kddk || '-';
+                    document.getElementById('res-tarifdaya').innerText = `${data.tarif} / ${data.daya} VA`;
+
+                    document.getElementById('box-catatan').style.display = 'block';
+                    document.getElementById('input-catatan').value = data.keterangan || ''; 
+                    
+                    if(data.waktu_update && data.waktu_update.trim() !== "") {
+                        let waktuTampil = data.waktu_update; 
+                        if(waktuTampil.includes('T') && waktuTampil.includes('Z')) {
+                            let d = new Date(waktuTampil);
+                            waktuTampil = d.toLocaleString('id-ID'); 
+                        }
+                        document.getElementById('res-timestamp').innerText = `Terakhir update: ${waktuTampil}`;
+                    } else {
+                        document.getElementById('res-timestamp').innerText = "Belum ada catatan";
+                    }
+
+                    const badge = document.getElementById('res-status-badge');
+                    const st = (data.status_pel || '').toUpperCase();
+                    badge.innerText = st || 'UNKNOWN';
+                    badge.className = 'status-badge ' + (st.includes('NON') ? 'badge-inactive' : 'badge-active');
+
+                    if (data.koordinat) { document.getElementById('btn-maps').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.koordinat)}`; document.getElementById('btn-maps').style.display = 'flex'; } else { document.getElementById('btn-maps').style.display = 'none'; }
+                    if (data.foto_link) { document.getElementById('btn-foto-meter').href = data.foto_link; document.getElementById('btn-foto-meter').style.display = 'flex'; } else { document.getElementById('btn-foto-meter').style.display = 'none'; }
+                    if (data.foto_rumah) { document.getElementById('btn-foto-rumah').href = data.foto_rumah; document.getElementById('btn-foto-rumah').style.display = 'flex'; } else { document.getElementById('btn-foto-rumah').style.display = 'none'; }
+
+                } else {
+                    document.getElementById('res-nama').innerText = 'TIDAK DITEMUKAN';
+                    document.getElementById('box-catatan').style.display = 'none'; 
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading-view').style.display = 'none';
+                alert("Koneksi gagal. Periksa jaringan Anda.");
+                resetApp();
+            });
+    }
+
+    function simpanCatatan() {
+        const teksCatatan = document.getElementById('input-catatan').value;
+        const btn = document.getElementById('btn-simpan-catatan');
+        const timestampDiv = document.getElementById('res-timestamp');
+        
+        btn.innerText = "⏳ Menyimpan...";
+        btn.disabled = true;
+        
+        const dataUpload = { action: "simpan_catatan", idTarget: lastScannedId, catatan: teksCatatan };
+
+        fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(dataUpload)
+        })
+        .then(response => response.json())
+        .then(res => {
+            btn.disabled = false;
+            if(res.status === "success"){
+                btn.innerText = "✅ Tersimpan!";
+                timestampDiv.innerText = `Terakhir update: ${res.timestamp}`;
+                timestampDiv.style.color = "#2e7d32"; 
+                setTimeout(() => { 
+                    btn.innerText = "💾 Simpan Perubahan"; 
+                    timestampDiv.style.color = "#8d6e63"; 
+                }, 2000);
+            } else {
+                alert("Gagal menyimpan!");
+                btn.innerText = "💾 Coba Lagi";
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            alert("Terjadi kesalahan jaringan saat menyimpan data.");
+            btn.innerText = "💾 Coba Lagi";
+        });
+    }
+
+    function submitManual() { searchData(document.getElementById('input-manual').value); }
+    
+    function resetApp() {
+        document.getElementById('result-view').style.display = 'none';
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('search-container').style.display = 'block';
+        if (document.getElementById('tab-scan-btn').classList.contains('active')) {
+            startScanner();
+        }
+    }
+</script>
+
+</body>
+</html>
