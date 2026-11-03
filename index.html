@@ -105,7 +105,7 @@
         <div class="card" id="manual-section" style="display: none;">
             <div class="form-group">
                 <label>No Meter / ID Pelanggan</label>
-                <input type="text" id="input-manual" class="form-control" placeholder="cth: 14049927651/224600059716">
+                <input type="text" id="input-manual" class="form-control" placeholder="Contoh: 14049927651">
             </div>
             <button class="btn-submit" onclick="submitManual()">Cari Data</button>
         </div>
@@ -130,6 +130,11 @@
             <div class="info-tile"><div class="info-label">ID Pelanggan</div><div class="info-value" id="res-idpel">-</div></div>
             <div class="info-tile"><div class="info-label">KDDK</div><div class="info-value" id="res-kddk">-</div></div>
             <div class="info-tile"><div class="info-label">Tarif / Daya</div><div class="info-value" id="res-tarifdaya">-</div></div>
+            <!-- TAMBAHAN KOLOM DATA BARU -->
+            <div class="info-tile"><div class="info-label">No HP</div><div class="info-value" id="res-nohp">-</div></div>
+            <div class="info-tile"><div class="info-label">No Identitas</div><div class="info-value" id="res-noidentitas">-</div></div>
+            <div class="info-tile"><div class="info-label">Merk KWH</div><div class="info-value" id="res-merkkwh">-</div></div>
+            <div class="info-tile"><div class="info-label">Tahun KWH</div><div class="info-value" id="res-tahunkwh">-</div></div>
         </div>
 
         <div class="note-section" id="box-catatan" style="display: none;">
@@ -153,7 +158,7 @@
 
 <script>
     // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNv9mTgl73Dx7wNE1kPoHisfV8IaZIgjvshn53TG3Yq_kmiCwsa_ETAj8o48k6bl2YEA/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCXdzrqtmX6FpRCWFRhh2i7eYJgkoBc3gtBxt-Q8kCbHBzHQTR-5F0lzeqzNh0G1NLNQ/exec";
     
     let html5QrCode;
     let isScanning = false;
@@ -311,6 +316,12 @@
                     document.getElementById('res-idpel').innerText = data.idpel || '-';
                     document.getElementById('res-kddk').innerText = data.kddk || '-';
                     document.getElementById('res-tarifdaya').innerText = `${data.tarif} / ${data.daya} VA`;
+
+                    // PENGISIAN DATA BARU
+                    document.getElementById('res-nohp').innerText = data.no_hp || '-';
+                    document.getElementById('res-noidentitas').innerText = data.no_identitas || '-';
+                    document.getElementById('res-merkkwh').innerText = data.merk_kwh || '-';
+                    document.getElementById('res-tahunkwh').innerText = data.tahun_kwh || '-';
 
                     document.getElementById('box-catatan').style.display = 'block';
                     document.getElementById('input-catatan').value = data.keterangan || ''; 
