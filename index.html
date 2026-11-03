@@ -58,7 +58,11 @@
         .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
         .info-tile { background: #f8fafc; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid #edf2f7; }
         .info-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+        
+        /* CSS Baru untuk Data Rahasia & Ikon Mata */
+        .secure-data-container { display: flex; justify-content: space-between; align-items: center; }
         .info-value { font-size: 14px; font-weight: 600; word-break: break-word; }
+        .btn-reveal { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--primary); padding: 0 4px; }
         
         .note-section { background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: var(--radius-md); margin-bottom: 16px; }
         .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;}
@@ -130,9 +134,23 @@
             <div class="info-tile"><div class="info-label">ID Pelanggan</div><div class="info-value" id="res-idpel">-</div></div>
             <div class="info-tile"><div class="info-label">KDDK</div><div class="info-value" id="res-kddk">-</div></div>
             <div class="info-tile"><div class="info-label">Tarif / Daya</div><div class="info-value" id="res-tarifdaya">-</div></div>
-            <!-- TAMBAHAN KOLOM DATA BARU -->
-            <div class="info-tile"><div class="info-label">No HP</div><div class="info-value" id="res-nohp">-</div></div>
-            <div class="info-tile"><div class="info-label">No Identitas</div><div class="info-value" id="res-noidentitas">-</div></div>
+            
+            <!-- TAMBAHAN KOLOM DATA RAHASIA DENGAN PIN -->
+            <div class="info-tile">
+                <div class="info-label">No HP</div>
+                <div class="secure-data-container">
+                    <div class="info-value" id="res-nohp">-</div>
+                    <button class="btn-reveal" id="btn-reveal-hp" onclick="bukaDataRahasia('hp')" style="display: none;" title="Tampilkan">👁️</button>
+                </div>
+            </div>
+            <div class="info-tile">
+                <div class="info-label">No Identitas</div>
+                <div class="secure-data-container">
+                    <div class="info-value" id="res-noidentitas">-</div>
+                    <button class="btn-reveal" id="btn-reveal-identitas" onclick="bukaDataRahasia('identitas')" style="display: none;" title="Tampilkan">👁️</button>
+                </div>
+            </div>
+            
             <div class="info-tile"><div class="info-label">Merk KWH</div><div class="info-value" id="res-merkkwh">-</div></div>
             <div class="info-tile"><div class="info-label">Tahun KWH</div><div class="info-value" id="res-tahunkwh">-</div></div>
         </div>
@@ -165,22 +183,22 @@
     let availableCameras = [];
     let currentCameraIndex = 0;
     let lastScannedId = ""; 
+    
+    // Variabel untuk menyimpan data rahasia
+    let dataAsliNoHp = "";
+    let dataAsliNoIdentitas = "";
 
     // Mendeteksi kamera dan membuat tombol pilihan lensa
     Html5Qrcode.getCameras().then(devices => {
         if (devices && devices.length) {
             availableCameras = devices;
-            
-            // Coba cari kamera belakang sebagai default (lensa utama)
             for(let i=0; i < devices.length; i++){
                 if(devices[i].label.toLowerCase().includes('back')) {
                     currentCameraIndex = i;
                     break;
                 }
             }
-
             renderLensButtons();
-
             if (document.getElementById('tab-scan-btn').classList.contains('active')) {
                 startScanner();
             }
@@ -192,19 +210,14 @@
         document.getElementById('lens-info-text').innerText = "Mohon izinkan akses kamera pada browser Anda.";
     });
 
-    // Fungsi menggambar tombol pilihan 4 Lensa
     function renderLensButtons() {
         const container = document.getElementById('lens-buttons-container');
         const infoText = document.getElementById('lens-info-text');
         container.innerHTML = ''; 
-        
         if (availableCameras.length > 1) {
             container.style.display = 'flex';
-            infoText.style.display = 'none'; // Sembunyikan teks info jika tombol sudah ada
-            
-            // Batasi maksimal 4 pilihan tombol lensa (sesuai permintaan)
+            infoText.style.display = 'none'; 
             const maxLensa = Math.min(availableCameras.length, 4);
-            
             for(let i = 0; i < maxLensa; i++) {
                 const btn = document.createElement('button');
                 btn.className = `btn-lens ${i === currentCameraIndex ? 'active' : ''}`;
@@ -218,20 +231,14 @@
         }
     }
 
-    // Fungsi ketika tombol lensa diklik
     function selectLens(index) {
-        if (currentCameraIndex === index) return; // Jika klik lensa yang sama, abaikan
-        
+        if (currentCameraIndex === index) return; 
         currentCameraIndex = index;
-        
-        // Update warna tombol (hijau untuk yang aktif)
         const buttons = document.querySelectorAll('.btn-lens');
         buttons.forEach((btn, i) => {
             if (i === index) btn.classList.add('active');
             else btn.classList.remove('active');
         });
-
-        // Restart kamera dengan lensa yang baru
         if (isScanning) {
             stopScanner().then(() => {
                 setTimeout(() => startScanner(), 300);
@@ -242,39 +249,16 @@
     function startScanner() {
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
         if (isScanning || availableCameras.length === 0) return;
-
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] 
-        };
-
+        const config = { fps: 10, qrbox: { width: 250, height: 250 }, formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] };
         let cameraId = availableCameras[currentCameraIndex].id;
-
-        html5QrCode.start(
-            cameraId,
-            config,
-            (decodedText) => {
-                stopScanner().then(() => searchData(decodedText));
-            },
-            (errorMessage) => {}
-        ).then(() => {
-            isScanning = true;
-        }).catch((err) => {
-            console.error(err);
-        });
+        html5QrCode.start(cameraId, config, (decodedText) => { stopScanner().then(() => searchData(decodedText)); }, (errorMessage) => {}).then(() => { isScanning = true; }).catch((err) => { console.error(err); });
     }
 
     function stopScanner() {
         return new Promise((resolve) => {
             if (html5QrCode && isScanning) {
-                html5QrCode.stop().then(() => {
-                    isScanning = false;
-                    resolve();
-                }).catch(err => resolve());
-            } else {
-                resolve();
-            }
+                html5QrCode.stop().then(() => { isScanning = false; resolve(); }).catch(err => resolve());
+            } else { resolve(); }
         });
     }
 
@@ -316,12 +300,32 @@
                     document.getElementById('res-idpel').innerText = data.idpel || '-';
                     document.getElementById('res-kddk').innerText = data.kddk || '-';
                     document.getElementById('res-tarifdaya').innerText = `${data.tarif} / ${data.daya} VA`;
-
-                    // PENGISIAN DATA BARU
-                    document.getElementById('res-nohp').innerText = data.no_hp || '-';
-                    document.getElementById('res-noidentitas').innerText = data.no_identitas || '-';
                     document.getElementById('res-merkkwh').innerText = data.merk_kwh || '-';
                     document.getElementById('res-tahunkwh').innerText = data.tahun_kwh || '-';
+
+                    // PENANGANAN DATA RAHASIA
+                    dataAsliNoHp = data.no_hp || '-';
+                    dataAsliNoIdentitas = data.no_identitas || '-';
+
+                    const elHp = document.getElementById('res-nohp');
+                    const btnHp = document.getElementById('btn-reveal-hp');
+                    if (dataAsliNoHp !== '-' && dataAsliNoHp.trim() !== '') {
+                        elHp.innerText = '••••••••';
+                        btnHp.style.display = 'block';
+                    } else {
+                        elHp.innerText = '-';
+                        btnHp.style.display = 'none';
+                    }
+
+                    const elId = document.getElementById('res-noidentitas');
+                    const btnId = document.getElementById('btn-reveal-identitas');
+                    if (dataAsliNoIdentitas !== '-' && dataAsliNoIdentitas.trim() !== '') {
+                        elId.innerText = '••••••••';
+                        btnId.style.display = 'block';
+                    } else {
+                        elId.innerText = '-';
+                        btnId.style.display = 'none';
+                    }
 
                     document.getElementById('box-catatan').style.display = 'block';
                     document.getElementById('input-catatan').value = data.keterangan || ''; 
@@ -356,6 +360,22 @@
                 alert("Koneksi gagal. Periksa jaringan Anda.");
                 resetApp();
             });
+    }
+
+    // FUNGSI UNTUK MEMBUKA DATA RAHASIA
+    function bukaDataRahasia(tipe) {
+        const pin = prompt("Masukkan PIN untuk melihat data rahasia:");
+        if (pin === "123") {
+            if (tipe === 'hp') {
+                document.getElementById('res-nohp').innerText = dataAsliNoHp;
+                document.getElementById('btn-reveal-hp').style.display = 'none'; // Sembunyikan ikon setelah dibuka
+            } else if (tipe === 'identitas') {
+                document.getElementById('res-noidentitas').innerText = dataAsliNoIdentitas;
+                document.getElementById('btn-reveal-identitas').style.display = 'none';
+            }
+        } else if (pin !== null) {
+            alert("PIN Salah! Akses ditolak.");
+        }
     }
 
     function simpanCatatan() {
